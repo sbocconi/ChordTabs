@@ -1,57 +1,11 @@
+import itertools
+
 from chorddiagram import ChordDiagram
 from instrument import Instrument
+from globals import SEL_DEGREES, DEGREES
+
 
 class Tab:
-    inputs = {
-        'max_dist':{
-            'desc': "The max distance between fretted notes",
-            'type' : int,
-            'default' : 5
-        },
-        'min_fret_pos':{
-            'desc': "Fret of the lowest fretted note",
-            'type' : int,
-            'default' : -1
-        },
-        'max_fret_pos':{
-            'desc': "Fret of the highest fretted note",
-            'type' : int,
-            'default' : -1
-        },
-        'allow_open_strings':{
-            'desc': "Allow open strings in the chord",
-            'type' : bool,
-            'default' : False
-        },
-        'bottom_top_notes':{
-            'desc': "Specify the bottom and top note",
-            'type' : tuple,
-            'subtype' : str,
-            'default' : None,
-            'wildcard' : '*'
-        },
-        'prefer_strings': {
-            'desc': "What strings should be part of the voicing",
-            'type' : tuple,
-            'subtype' : int,
-            'default' : None
-        },
-        'avoid_strings': {
-            'desc': "What strings should NOT be part of the voicing",
-            'type' : tuple,
-            'subtype' : int,
-            'default' : None
-        },
-        'gap_top_strings': {
-            'desc': "Allow string gaps in the highest part of the chord",
-            'type' : bool,
-            'default' : True
-        },
-        # 'partial': {
-        #     'type' : bool,
-        #     'default' : False
-        # }
-    }
     def __init__(self, inversion, fret_nrs, chosen_strings, open_string_notes):
         # breakpoint()
         # We prefer to have tabs from lower string to highest string
@@ -148,31 +102,141 @@ class Tab:
     def get_label(self):
         return ', '.join(self.inversion)
 
-    def get_tab(self):
+    def tab_as_tuple_array(self):
         # returns an array of the form [('G', 6, 3), ('Bb', 5, 1), ('E', 4, 2), ('C', 3, 5)]
         return [i for i in zip(self.inversion,self.chosen_strings,self.fret_nrs)]
     
     def print_tab(self):
         # breakpoint()
-        print(f"(note,strings,fret): {self.get_tab()}, max dist: {self.max_fret_dist()}")
+        print(f"(note,strings,fret): {self.tab_as_tuple_array()}, max dist: {self.max_fret_dist()}")
 
 class Tabs:
+    inputs = {
+        'max_dist':{
+            'desc': "The max distance between fretted notes",
+            'type' : int,
+            'default' : 5
+        },
+        'min_fret_pos':{
+            'desc': "Fret of the lowest fretted note",
+            'type' : int,
+            'default' : -1
+        },
+        'max_fret_pos':{
+            'desc': "Fret of the highest fretted note",
+            'type' : int,
+            'default' : -1
+        },
+        'allow_open_strings':{
+            'desc': "Allow open strings in the chord",
+            'type' : bool,
+            'default' : False
+        },
+        'bottom_top_notes':{
+            'desc': "Specify the bottom and top note",
+            'type' : tuple,
+            'subtype' : str,
+            'default' : None,
+            'wildcard' : '*'
+        },
+        'prefer_strings': {
+            'desc': "What strings should be part of the voicing",
+            'type' : tuple,
+            'subtype' : int,
+            'default' : None
+        },
+        'avoid_strings': {
+            'desc': "What strings should NOT be part of the voicing",
+            'type' : tuple,
+            'subtype' : int,
+            'default' : None
+        },
+        'gap_top_strings': {
+            'desc': "Allow string gaps in the highest part of the chord",
+            'type' : bool,
+            'default' : True
+        },
+    }
+
     
-    def __init__(self, chord, instrument:Instrument):
+    def __init__(self, chord:list, instrument:Instrument, min_nr_notes:int):
+        # Chord is an array with degrees 1,3,5,7,9,11,13 possibly missing
         self.chord = chord
+        self.instrument = instrument
+        self.min_nr_notes = min_nr_notes
         self.all_tabs = {}
         self.selected_tabs = {}
-        self.instrument = instrument
+        self.pdf_title = f"Tabs for the chord: {self.chord}"
+        self.pdf_description = "Generated automatically by Farback"
+
+
+        self.complete_combinations()
     
-    def add(self, key, tab):
+    def add(self, key, note_seq,fret_nrs,chosen_strings, instrument):
         if key not in self.all_tabs:
             self.all_tabs[key] = []
+        tab = Tab(note_seq,fret_nrs,chosen_strings, instrument.open_string_notes())
         self.all_tabs[key].append(tab)
     
+    def create_tabs(self, key, chosen_notes):
+    # Permutations of the notes in the chord
+    # Creates all possible positions for the given notes (order is meaningful)
+        for note_seq in itertools.permutations(chosen_notes):
+            # Here we pick all distinct groups of strings size=length(note_seq) (order not important)
+            for chosen_strings in itertools.combinations(self.instrument.strings_idx, len(note_seq)):
+                # Permutations in the strings to fret
+                all_fret_nrs = [ [ ] for i in range(len(note_seq))]
+                for i in range(len(note_seq)):
+                    # Calculate all positions of a particular note on i-th string
+                    all_fret_nrs[i] = [ idx for idx in range(self.instrument.notes_per_string()) if note_seq[i] in self.instrument.note_at(chosen_strings[i],idx)]
+                    # breakpoint()
+                for fret_nrs in itertools.product(*all_fret_nrs):
+                    # Add a tab for each combination of positions
+                    self.add(key, note_seq,fret_nrs,chosen_strings, self.instrument)
+
+
+    def complete_combinations(self)-> None:
+        # We had all combinations that do not have necessarily a logic
+        # This group is made not to overlap with logic combinations
+        new_degrees = {}
+        for nr_notes_in_chord in range(self.min_nr_notes,len(self.chord)+1):
+            # breakpoint()
+            # Here we pick all distinct groups of length nr_notes_in_chord (order not important)
+            for chosen_degrees in itertools.combinations(DEGREES.keys(), nr_notes_in_chord):
+                sel_degrees_present = False
+                # print(f"chosen_degrees: {chosen_degrees}")
+                for key in SEL_DEGREES.keys():
+                    if SEL_DEGREES[key]["Degrees"] == list(chosen_degrees):
+                        sel_degrees_present = True
+                        # breakpoint()
+                        break
+                if not sel_degrees_present:
+                    key = f"{chosen_degrees}_degrees"
+                    new_degrees[key] = {}
+                    new_degrees[key]["Desc"] = f"All combinations of {[DEGREES[i] for i in chosen_degrees]}"
+                    new_degrees[key]["Degrees"] = list(chosen_degrees)
+        self.complete_degrees = SEL_DEGREES | new_degrees
+        # breakpoint()
+
+    def generate_tabs(self)-> None:
+        for key in self.complete_degrees.keys():
+            degrees_present = True
+            for degree in self.complete_degrees[key]["Degrees"]:
+                if self.chord[degree] == '':
+                    degrees_present = False
+                    break
+            if degrees_present:
+                self.create_tabs(key, [self.chord[i] for i in self.complete_degrees[key]["Degrees"]])    
+
+        
+
+
     def filter_tabs(self, max_dist:int, allow_open_strings:bool, bottom_top_notes:tuple, prefer_strings:tuple, avoid_strings:tuple, gap_top_strings:bool, 
                    min_fret_pos:int=-1,max_fret_pos:int=-1):
         
         result = False
+        # Store PDF layout parameters
+        
         chord_bin = f"max_dist={max_dist}_openstr={allow_open_strings}_bottomtop={self.prtable_tpl(bottom_top_notes)}_prefstr={self.prtable_tpl(prefer_strings)}"
         chord_bin = f"{chord_bin}_avoidstr={self.prtable_tpl(avoid_strings)}_gaptop={gap_top_strings}_minfret={min_fret_pos}_maxfret{max_fret_pos}"
         self.chord_bin = chord_bin
@@ -227,15 +291,18 @@ class Tabs:
         
         for key in out_tabs:
             tabs_to_print = []
+            print(f'{self.complete_degrees[key]["Desc"]}')
             for tab in out_tabs[key]:
-                tab.print_tab()
-                tabs_to_print.append(tab.get_tab())
+                # tab.print_tab()
+                tabs_to_print.append(tab.tab_as_tuple_array())
         
-            if len(tabs_to_print) > 0:
-                # breakpoint()
-                diagram = ChordDiagram(self.chord, key, tabs_to_print, self.instrument)
-                diagram.create_lp()
-                diagram.create_pdf(self.chord_bin)
+            # if len(tabs_to_print) > 0:
+            #     # breakpoint()
+            #     diagram = ChordDiagram(self.chord, key, tabs_to_print, self.instrument, 
+            #                           title=self.pdf_title,
+            #                           description=self.pdf_description)
+            #     diagram.create_lp()
+            #     diagram.create_pdf(self.chord_bin)
 
     @classmethod
     def prtable_tpl(cls, tpl:tuple)->str:
