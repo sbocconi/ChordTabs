@@ -43,7 +43,6 @@ def main():
     tabs = Tabs(chord, instrument, min_nr_notes)
     tabs.generate_tabs()
     # breakpoint()
-    params = {}
     
     try: 
         while True:      
@@ -58,18 +57,18 @@ def main():
                             raise ExitFromUserInput()
                         
                         if prompt == '':
-                            params[f'{param}'] = data['default']
+                            data['current'] = data['default']
                         else:
                             if data['type'] == tuple:
                                 prompt = prompt.split(',')
                                 # breakpoint()
-                                params[param] =  data['type']([data['subtype'](i) for i in prompt])
+                                data['current'] =  data['type']([data['subtype'](i) for i in prompt])
                             elif data['type'] == bool:
                                 if prompt != 'True' and prompt != 'False':
                                     raise ValueError()
-                                params[param] = True if prompt == 'True' else False
+                                data['current'] = True if prompt == 'True' else False
                             else:
-                                params[param] =  data['type'](prompt)
+                                data['current'] =  data['type'](prompt)
                         break
                     except ValueError:
                         print(f"Sorry, {prompt} cannot be assigned to {param} of type {data['type']}")
@@ -77,7 +76,7 @@ def main():
                         continue
                     
             # breakpoint()
-            if tabs.filter_tabs(**params):
+            if tabs.filter_tabs():
                 tabs.print_tabs()
     except ExitFromUserInput:
         print(f"Requested to exit, bye!!")

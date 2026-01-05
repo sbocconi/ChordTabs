@@ -3,158 +3,161 @@ from pathlib import Path
 
 from instrument import Instrument
 
-pdf_tabs_per_row = 8 # Number of chord diagrams per row in PDF
-pdf_diagram_size = 1.5 # Size scaling factor for chord diagrams (1.5 = default larger size, 1.0 = normal)
-pdf_row_spacing = 5.0 # Vertical spacing between rows in PDF (in mm)
-pdf_column_spacing = 2.0
+BASE_DIAGRAM_WIDTH = 2.0
+ROW_SPACING = 5.0 # Vertical spacing between rows in PDF (in mm)
+COLUMN_SPACING = 2.0
 
 class ChordDiagram:
     TMP_FILE = '/tmp/tmp.ly'
     LILYPOND_BIN = '/opt/homebrew/bin/lilypond'
     ROOT = "./GeneratedTabs"
+
     
 
-    def __init__(self, chord_notes:list, chord_type:str, tabs:list, instrument:Instrument, title:str=None, description:str=None):
-        self.chord_notes = chord_notes
-        self.chord_type = chord_type
-        self.tabs = tabs
-        self.instrument = instrument
-        self.title = title
-        self.description = description
+    def __init__(self, top_margin:int=5, bottom_margin:int=6, left_margin:int=10, right_margin:int=10, diagram_scale:float=1.4):
+        self.top_margin = top_margin
+        self.bottom_margin = bottom_margin
+        self.left_margin = left_margin
+        self.right_margin = right_margin
+        self.diagram_scale = diagram_scale
         # breakpoint()
 
-    
-    def calculate_line_width_and_margins(self):
-        """
-        Calculate appropriate line-width based on number of columns, diagram size, and spacing.
-        For A4 paper (21cm wide), we adjust margins to fit the content.
-        Each chord diagram is approximately 2cm wide at size 1.0.
-        Returns (line_width_cm, left_margin_mm, right_margin_mm)
-        """
-        # Base width per diagram (in cm) at size 1.0 (default is now 1.5)
-        base_diagram_width = 2.0
-        # Calculate total width needed
-        diagram_width = base_diagram_width * pdf_diagram_size
-        total_spacing = (pdf_tabs_per_row - 1) * (pdf_column_spacing / 10.0)  # Convert mm to cm
-        needed_width = pdf_tabs_per_row * diagram_width + total_spacing
-        
-        # Add some padding (10%)
-        calculated_width = needed_width * 1.1
-        
-        # A4 paper is 21cm wide
-        a4_width = 21.0
-        # Minimum margins we want to keep
-        min_margin = 5.0  # 5mm minimum margin
-        max_line_width = a4_width - (2 * min_margin / 10.0)  # Convert mm to cm
-        
-        if calculated_width <= max_line_width:
-            # Use calculated width, standard margins
-            line_width = calculated_width
-            left_margin = 15.0
-            right_margin = 15.0
-        else:
-            # Use maximum width, smaller margins
-            line_width = max_line_width
-            remaining_space = a4_width - line_width
-            margin = remaining_space / 2 * 10.0  # Convert cm to mm
-            left_margin = margin
-            right_margin = margin
-        
-        return (line_width, left_margin, right_margin)
-    
-    def create_lp(self):
-        line_width_cm, left_margin_mm, right_margin_mm = self.calculate_line_width_and_margins()
-        ly_grid = r"""
-        \version "2.24.2"
-        \paper {
-            top-margin = 10\mm
-            bottom-margin = 10\mm
-            left-margin = """ + f"{left_margin_mm:.1f}\\mm" + r"""
-            right-margin = """ + f"{right_margin_mm:.1f}\\mm" + r"""
-            line-width = """ + f"{line_width_cm:.1f}\\cm" + r"""
-            page-breaking = #ly:optimal-breaking
-        }
+    def make_header(self, title, composer, description) -> str:
+        header = r"""
+\version "2.24.4"
+\book {
 
-        \markup {
-        \override #'(fret-diagram-details . (
-            (finger-code . in-dot)        ; put labels inside the dots
-            (dot-color . black)           ; black filled dots
-            (dot-label-color . white)     ; white note names
-            (dot-radius . 0.55)           ; size of dots
-            (dot-label-font-mag . 0.8)    ; label font size
-            (fret-count . 5)              ; number of frets shown
-        ))
-        """ + self.make_grid() + '}'
+\paper {
+    % https://lilypond.org/doc/v2.25/Documentation/notation/the-paper-block
+  #(set-paper-size "a4" 'portrait)
+  
+  top-margin = """ + f"{self.top_margin}" + r"""\mm
+  bottom-margin = """ + f"{self.bottom_margin}" + r"""\mm
+  %left-margin = """ + f"{self.left_margin}" + r"""\mm % The margin between the left edge of the page and the start of the staff lines in unindented systems. If the paper size is modified, this dimension’s default value is scaled accordingly. If left-margin is unset, and both line-width and right-margin are set, then left-margin is set to (paper-width - line-width - right-margin). If only line-width is set, then both margins are set to ((paper-width - line-width) / 2), and the systems are consequently centered on the page.
+  %right-margin = """ + f"{self.right_margin}" + r"""\mm % The margin between the right edge of the page and the end of the staff lines in non-ragged systems. If the paper size is modified, this dimension’s default value is scaled accordingly. If right-margin is unset, and both line-width and left-margin are set, then right-margin is set to (paper-width - line-width - left-margin). If only line-width is set, then both margins are set to ((paper-width - line-width) / 2), and the systems are consequently centered on the page.
+  %line-width = 170\mm leave unset to have line-width = (paper-width - left-margin - right-margin)
+  
+  check-consistency = ##t %If this is true (the default value), print a warning if left-margin, line-width, and right-margin do not exactly add up to paper-width, and replace each of these (except paper-width) with their default values (scaled to the paper size if necessary). If set to false, ignore any inconsistencies and allow systems to run off the edge of the page. 
+  
+  two-sided = ##f % If set to true, use inner-margin, outer-margin and binding-offset to determine margins depending on whether the page number is odd or even. This overrides left-margin and right-margin.
+  
+  tocItemMarkup = \tocItemWithDotsMarkup
+}
+
+\header {
+  title = """ + f'"{title}"' + r"""
+  composer = """ + f'"{composer}"' + r"""
+}
+%\fontsize #1 \italic {
+%    \wordwrap-string """ + f'"description"' + r"""
+%}
+
+\markuplist \table-of-contents
+\pageBreak
+
+"""
+        return header
+    
+    @classmethod
+    def make_chapter(cls, string_count:int, fret_count:int, chapter_title:str, chapter_subtitle:str, chapter_desc:str):
+
+        chapter = r"""
+\tocItem \markup """ + f'"{chapter_title}"' + r"""
+\markuplist {
+\override #'(fret-diagram-details . (
+    (finger-code . in-dot)
+    (dot-color . black)
+    (dot-label-color . white)
+    (dot-radius . 0.55)
+    (dot-label-font-mag . 0.8)
+    (string-count . """ + f'{string_count}' + r""")
+    (fret-count . """ + f'{fret_count}' + r""")
+  ))
+
+  {
+  \fontsize #4 \bold """ + f'"{chapter_title}"' + r"""
+  \vspace #1
+  \fontsize #1 \italic {
+    \wordwrap-string """ + f'"{chapter_subtitle}"' + r"""
+  }
+  \vspace #1
+  \fontsize #3 \bold """ + f'"{chapter_desc}"' + r"""
+  \vspace #3
+"""
+        return chapter
+    
+
+    def calculate_nr_cols(self):
+        """
+        For A4 paper (21cm wide) calculate appropriate number of tabs per row based on diagram size and spacing.
+        Each chord diagram is BASE_DIAGRAM_WIDTH wide at size 1.0.
+        Returns number of columns
+        """
+        # Calculate diagram total width
+        diagram_width = BASE_DIAGRAM_WIDTH * self.diagram_scale
+        # A4 paper is 21cm wide
+        a4_width = 210.0
+        available_space = a4_width - self.left_margin - self.right_margin
+        nr_col = (available_space + COLUMN_SPACING) // (diagram_width + COLUMN_SPACING)
+        
+        return nr_col
+    
+    def create_lp(self, title, composer, description, tabs, string_count, fret_count):
+        # breakpoint()
+        ly_grid =  self.make_header(title, composer, description) + self.make_grid(tabs, string_count, fret_count) + '}'
 
         with open(self.TMP_FILE, "w") as f:
             f.write(ly_grid)
         
-    def chord_to_lilypond(self,tab):
+    @classmethod
+    def chord_to_lilypond(cls, tab, nr_strings):
         """
         tab: list of (note, string, fret)
         string = 6 (low E) … 1 (high E)
         """
-        diagram = [f"(mute {i})" for i in reversed(range(1, self.instrument.nr_strings+1))]
+        diagram = [f"(mute {i})" for i in reversed(range(1, nr_strings+1))]
         # breakpoint()
-        for note, string, fret in tab:
+        for note, string, fret in tab.tab_as_tuple_array():
             # breakpoint()
-            diagram[self.instrument.nr_strings - string] = f'(place-fret {string} {fret} "{note}")'
+            diagram[nr_strings - string] = f'(place-fret {string} {fret} "{note}")'
 
         return "\\fret-diagram-verbose #'(" + " ".join(diagram) + ')'
 
-    def make_header_items(self):
-        """
-        Creates header items (title and description) if provided
-        Returns list of header markup items
-        """
-        header_items = []
-        if self.title:
-            # Escape special characters in title for LilyPond
-            title_escaped = self.title.replace('\\', '\\textbackslash{}').replace('"', '\\"')
-            header_items.append(f'\\vspace #4')
-            header_items.append(f'\\fontsize #4 \\bold "{title_escaped}"')
-        if self.description:
-            # Escape special characters in description
-            desc_escaped = self.description.replace('\\', '\\textbackslash{}').replace('"', '\\"')
-            header_items.append(f'\\vspace #2')
-            header_items.append(f'\\wordwrap-string "{desc_escaped}"')
-        if header_items:
-            header_items.append(f'\\vspace #4')
-        return header_items
     
-    def make_grid(self):
+    def make_grid(self, tabs, string_count, fret_count):
         """
         Creates a grid layout with configurable spacing between rows
         """
+        nr_col = self.calculate_nr_cols()
         rows = []
-        num_rows = (len(self.tabs) + pdf_tabs_per_row - 1) // pdf_tabs_per_row  # Ceiling division
-        for row_idx, i in enumerate(range(0, len(self.tabs), pdf_tabs_per_row)):
+        for key in tabs:
             line_items = []
-            row_tabs = self.tabs[i:min(i+pdf_tabs_per_row,len(self.tabs))]
-            for tab_idx, tab in enumerate(row_tabs):
-                # breakpoint()
-                code = self.chord_to_lilypond(tab)
-                # Apply size scaling to each diagram (always apply scale for consistency)
-                diagram_code = f'\\scale #({pdf_diagram_size} . {pdf_diagram_size}) {{ \\column {{ {code} }}}}'
-                line_items.append(diagram_code)
-                # Add horizontal spacing after each diagram except the last
-                # Convert mm to staff-space units (approximately 1 staff-space = 0.75mm)
-                if tab_idx < len(row_tabs) - 1:
-                    hspace_staff = round(pdf_column_spacing / 0.75) if pdf_column_spacing > 0 else 1
-                    line_items.append(f'\\hspace #{hspace_staff}')
-            rows.append("\\line { " + " ".join(line_items) + " }")
-            # Add configurable spacing between rows (skip spacing after last row)
-            # Convert mm to staff-space units (approximately 1 staff-space = 0.75mm)
-            if row_idx < num_rows - 1:
-                vspace_staff = round(pdf_row_spacing / 0.75) if pdf_row_spacing > 0 else 1
-                rows.append(f"\\vspace #{vspace_staff}")
+            for index, tab in enumerate(tabs[key]["Tabs"]):
+                if not tabs[key]["Selected"][index]:
+                    continue
+                # check we already have enough diagrams and horizontal spaces
+                if len(line_items) >= (2*nr_col-1):
+                    rows.append("\\fill-line { " + " ".join(line_items) + " }")
+                    rows.append(f"\\vspace #{ROW_SPACING}")
+                    line_items = []
+                # if len(rows) > 20:
+                #     break
+                code = self.chord_to_lilypond(tab,string_count)
+                line_items.append(code)
+                if len(line_items) < (2*nr_col-1):
+                    line_items.append(f'\\hspace #{COLUMN_SPACING}')            
+            if len(line_items) > 0:
+                rows.append("\\fill-line { \\scale #\'" +  f'({self.diagram_scale} . {self.diagram_scale})' +"{"  + " ".join(line_items) + " } }")
+                rows.append(f"\\vspace #{ROW_SPACING}")
         # Combine header items (if any) with grid rows
-        all_items = self.make_header_items() + rows
-        return "\\column {\n  " + "\n  ".join(all_items) + "\n}"
+        # breakpoint()
+        all_items = self.make_chapter(string_count, fret_count, tabs[key]["Desc"], "chapter_subtitle", "chapter_desc") + "\n  ".join(rows)
+        return all_items + "\n}\n}"
 
 
     def create_pdf(self, out_bin):
-        out_path = self.get_fullpath(out_bin)
+        # out_path = self.get_fullpath(out_bin)
+        out_path = out_bin
         # call the pdf creator on the lilypond path
         os.system('%(lilypond)s %(params)s -o %(output)s %(input)s' % {
             'lilypond': self.LILYPOND_BIN,

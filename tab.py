@@ -115,46 +115,54 @@ class Tabs:
         'max_dist':{
             'desc': "The max distance between fretted notes",
             'type' : int,
-            'default' : 5
+            'default' : 5,
+            'current' : None
         },
         'min_fret_pos':{
             'desc': "Fret of the lowest fretted note",
             'type' : int,
-            'default' : -1
+            'default' : -1,
+            'current' : None
         },
         'max_fret_pos':{
             'desc': "Fret of the highest fretted note",
             'type' : int,
-            'default' : -1
+            'default' : -1,
+            'current' : None
         },
         'allow_open_strings':{
             'desc': "Allow open strings in the chord",
             'type' : bool,
-            'default' : False
+            'default' : False,
+            'current' : None
         },
         'bottom_top_notes':{
             'desc': "Specify the bottom and top note",
             'type' : tuple,
             'subtype' : str,
             'default' : None,
-            'wildcard' : '*'
+            'wildcard' : '*',
+            'current' : None
         },
         'prefer_strings': {
             'desc': "What strings should be part of the voicing",
             'type' : tuple,
             'subtype' : int,
-            'default' : None
+            'default' : None,
+            'current' : None
         },
         'avoid_strings': {
             'desc': "What strings should NOT be part of the voicing",
             'type' : tuple,
             'subtype' : int,
-            'default' : None
+            'default' : None,
+            'current' : None
         },
         'gap_top_strings': {
             'desc': "Allow string gaps in the highest part of the chord",
             'type' : bool,
-            'default' : True
+            'default' : True,
+            'current' : None
         },
     }
 
@@ -165,18 +173,20 @@ class Tabs:
         self.instrument = instrument
         self.min_nr_notes = min_nr_notes
         self.all_tabs = {}
-        self.selected_tabs = {}
-        self.pdf_title = f"Tabs for the chord: {self.chord}"
-        self.pdf_description = "Generated automatically by Farback"
 
 
         self.complete_combinations()
     
     def add(self, key, note_seq,fret_nrs,chosen_strings, instrument):
         if key not in self.all_tabs:
-            self.all_tabs[key] = []
+            self.all_tabs[key] = {}
+            self.all_tabs[key]["Desc"] = self.complete_degrees[key]["Desc"]
+            self.all_tabs[key]["Degrees"] = self.complete_degrees[key]["Degrees"]
+            self.all_tabs[key]["Tabs"] = []
+            self.all_tabs[key]["Selected"] = []
         tab = Tab(note_seq,fret_nrs,chosen_strings, instrument.open_string_notes())
-        self.all_tabs[key].append(tab)
+        self.all_tabs[key]["Tabs"].append(tab)
+        self.all_tabs[key]["Selected"].append(True)
     
     def create_tabs(self, key, chosen_notes):
     # Permutations of the notes in the chord
@@ -196,7 +206,7 @@ class Tabs:
 
 
     def complete_combinations(self)-> None:
-        # We had all combinations that do not have necessarily a logic
+        # We add all combinations that do not have necessarily a logic
         # This group is made not to overlap with logic combinations
         new_degrees = {}
         for nr_notes_in_chord in range(self.min_nr_notes,len(self.chord)+1):
@@ -231,78 +241,82 @@ class Tabs:
         
 
 
-    def filter_tabs(self, max_dist:int, allow_open_strings:bool, bottom_top_notes:tuple, prefer_strings:tuple, avoid_strings:tuple, gap_top_strings:bool, 
-                   min_fret_pos:int=-1,max_fret_pos:int=-1):
+    def filter_tabs(self):
         
         result = False
-        # Store PDF layout parameters
-        
-        chord_bin = f"max_dist={max_dist}_openstr={allow_open_strings}_bottomtop={self.prtable_tpl(bottom_top_notes)}_prefstr={self.prtable_tpl(prefer_strings)}"
-        chord_bin = f"{chord_bin}_avoidstr={self.prtable_tpl(avoid_strings)}_gaptop={gap_top_strings}_minfret={min_fret_pos}_maxfret{max_fret_pos}"
-        self.chord_bin = chord_bin
 
         for key in self.all_tabs:
-            selected_tabs = self.all_tabs[key].copy()
+            tab_count = 0
+            for index, tab in enumerate(self.all_tabs[key]["Tabs"]):
+                if Tabs.inputs['max_dist']['current'] != -1:
+                    if tab.max_fret_dist() > Tabs.inputs['max_dist']['current']:
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
+
+                if Tabs.inputs['allow_open_strings']['current'] != True:
+                    if tab.has_open_strings():
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
+
+                if Tabs.inputs['bottom_top_notes']['current'] != None:
+                    if not tab.is_preferred_inversion(Tabs.inputs['bottom_top_notes']['current']):
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
+                if Tabs.inputs['prefer_strings']['current'] != None:
+                    if not tab.are_preferred_strings(Tabs.inputs['prefer_strings']['current']):
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
+
+                if Tabs.inputs['avoid_strings']['current'] != None:
+                    if tab.are_avoided_strings(Tabs.inputs['avoid_strings']['current']):
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
             
-            if max_dist != -1:
-                selected_tabs[:] = [tab for tab in selected_tabs if tab.max_fret_dist() <= max_dist]
+                if Tabs.inputs['gap_top_strings']['current'] == False:
+                    if tab.gap_top_strings(Tabs.inputs['gap_top_strings']['current']):
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
+
+                if Tabs.inputs['min_fret_pos']['current'] != -1:
+                    if tab.min_fret_pos() < Tabs.inputs['min_fret_pos']['current']:
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
             
+                if Tabs.inputs['max_fret_pos']['current'] != -1:
+                    if tab.max_fret_pos() > Tabs.inputs['max_fret_pos']['current']:
+                        self.all_tabs[key]["Selected"][index] = False
+                        continue
+            
+                if self.all_tabs[key]["Selected"][index]:
+                    tab_count += 1
             # breakpoint()
-
-            if allow_open_strings != True:
-                selected_tabs[:] = [tab for tab in selected_tabs if not tab.has_open_strings()]
-
-            if bottom_top_notes != None:
-                # breakpoint()
-                selected_tabs[:] = [tab for tab in selected_tabs if tab.is_preferred_inversion(bottom_top_notes)]
-
-            if prefer_strings != None:
-                # breakpoint()
-                selected_tabs[:] = [tab for tab in selected_tabs if tab.are_preferred_strings(prefer_strings)]
-
-            if avoid_strings != None:
-                # breakpoint()
-                selected_tabs[:] = [tab for tab in selected_tabs if not tab.are_avoided_strings(avoid_strings)]
-            
-            if gap_top_strings == False:
-                selected_tabs[:] = [tab for tab in selected_tabs if not tab.gap_top_strings(allow_open_strings)]
-
-            if min_fret_pos != -1:
-                selected_tabs[:] = [tab for tab in selected_tabs if tab.min_fret_pos()>=min_fret_pos]
-            
-            if max_fret_pos != -1:
-                selected_tabs[:] = [tab for tab in selected_tabs if tab.max_fret_pos()<=max_fret_pos]
-            
-            # breakpoint()
-            if len(selected_tabs) == 0:
+            if tab_count == 0:
                 print(f"No tab satisfies selection for key {key}")
-                self.selected_tabs[key] = []
             else:
-                self.selected_tabs[key] = selected_tabs
+                print(f"{tab_count} tabs for key {key}")
                 result = True
         
         return result
 
-    def print_tabs(self, all:bool=False):
-        if all:
-            out_tabs = self.all_tabs
-        else:
-            out_tabs = self.selected_tabs
-        
-        for key in out_tabs:
-            tabs_to_print = []
-            print(f'{self.complete_degrees[key]["Desc"]}')
-            for tab in out_tabs[key]:
-                # tab.print_tab()
-                tabs_to_print.append(tab.tab_as_tuple_array())
-        
-            # if len(tabs_to_print) > 0:
-            #     # breakpoint()
-            #     diagram = ChordDiagram(self.chord, key, tabs_to_print, self.instrument, 
-            #                           title=self.pdf_title,
-            #                           description=self.pdf_description)
-            #     diagram.create_lp()
-            #     diagram.create_pdf(self.chord_bin)
+
+    def gen_description(self):
+        # chord_bin = f"max_dist={max_dist}_openstr={allow_open_strings}_bottomtop={self.prtable_tpl(bottom_top_notes)}_prefstr={self.prtable_tpl(prefer_strings)}"
+        # chord_bin = f"{chord_bin}_avoidstr={self.prtable_tpl(avoid_strings)}_gaptop={gap_top_strings}_minfret={min_fret_pos}_maxfret={max_fret_pos}"
+        # self.chord_bin = chord_bin
+        # 
+        desc = "Tabs generated with the following parameters:\n"
+        for param, data in Tabs.inputs.items():
+            # breakpoint()
+            desc = desc + f'{data["desc"]} = {data["current"]}\n'
+
+        return desc
+
+    def print_tabs(self):
+        diagram = ChordDiagram()
+        diagram.create_lp(title="la vacca title", composer="la vacca composer", description=self.gen_description(), 
+                          tabs=self.all_tabs, string_count = self.instrument.nr_strings, fret_count=Tabs.inputs['max_dist']['current'])
+        diagram.create_pdf("./porcoilclero")
+
 
     @classmethod
     def prtable_tpl(cls, tpl:tuple)->str:
