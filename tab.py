@@ -238,8 +238,6 @@ class Tabs:
             if degrees_present:
                 self.create_tabs(key, [self.chord[i] for i in self.complete_degrees[key]["Degrees"]])    
 
-        
-
 
     def filter_tabs(self):
         
@@ -304,17 +302,17 @@ class Tabs:
         # chord_bin = f"{chord_bin}_avoidstr={self.prtable_tpl(avoid_strings)}_gaptop={gap_top_strings}_minfret={min_fret_pos}_maxfret={max_fret_pos}"
         # self.chord_bin = chord_bin
         # 
-        desc = "Tabs generated with the following parameters:\n"
+        desc = f"Tabs generated for {self.instrument.name} with the following parameters:\n\n"
         for param, data in Tabs.inputs.items():
             # breakpoint()
-            desc = desc + f'{data["desc"]} = {data["current"]}\n'
+            desc = desc + f'{data["desc"]} = {data["current"]}\n\n'
 
         return desc
 
     def print_tabs(self):
         diagram = ChordDiagram()
-        diagram.create_lp(title="la vacca title", composer="la vacca composer", description=self.gen_description(), 
-                          tabs=self.all_tabs, string_count = self.instrument.nr_strings, fret_count=Tabs.inputs['max_dist']['current'])
+        diagram.create_lp(title=f"Tabs for chord {' '.join(self.chord)}", composer="Farback", description=self.gen_description(), 
+                          tabs=self.all_tabs, nr_strings = self.instrument.nr_strings, fret_count=Tabs.inputs['max_dist']['current'])
         diagram.create_pdf("./porcoilclero")
 
 
