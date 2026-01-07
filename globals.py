@@ -7,7 +7,7 @@ TONIC = 0
 THIRD = 1
 FIFTH = 2
 SEVENTH = 3
-NINETH = 4
+NINTH = 4
 ELEVENTH = 5
 THIRTEENTH = 6
 
@@ -16,7 +16,7 @@ DEGREES = {
             THIRD: "Third",
             FIFTH: "Fifth",
             SEVENTH: "Seventh",
-            NINETH: "Nineth",
+            NINTH: "Ninth",
             ELEVENTH: "Eleventh",
             THIRTEENTH: "Thirteenth"
 }
@@ -50,42 +50,42 @@ SEL_DEGREES = {
     "9th_Complete":
         {
             "Desc" : "All complete 9th chords",
-            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINETH]
+            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINTH]
         },
     "9th_No_Tonic":
         {
             "Desc" : "All 9th chords with no tonic",
-            "Degrees" : [THIRD, FIFTH, SEVENTH, NINETH]
+            "Degrees" : [THIRD, FIFTH, SEVENTH, NINTH]
         },
     "9th_No_5th":
         {
             "Desc" : "All 9th chords with no fifth",
-            "Degrees" : [TONIC, THIRD, SEVENTH, NINETH]
+            "Degrees" : [TONIC, THIRD, SEVENTH, NINTH]
         },
     "9th_No_Tonic_No_5th":
         {
             "Desc" : "All 9th chords with no tonic and no fifth",
-            "Degrees" : [THIRD, SEVENTH, NINETH]
+            "Degrees" : [THIRD, SEVENTH, NINTH]
         },
     "11th_Complete":
         {
             "Desc" : "All complete 11th chords",
-            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINETH, ELEVENTH]
+            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINTH, ELEVENTH]
         },
     "11th_No_Tonic":
         {
             "Desc" : "All 11th chords with no tonic",
-            "Degrees" : [THIRD, FIFTH, SEVENTH, NINETH, ELEVENTH]
+            "Degrees" : [THIRD, FIFTH, SEVENTH, NINTH, ELEVENTH]
         },
     "11th_No_5th":
         {
             "Desc" : "All 11th chords with no fifth",
-            "Degrees" : [TONIC, THIRD, SEVENTH, NINETH, ELEVENTH]
+            "Degrees" : [TONIC, THIRD, SEVENTH, NINTH, ELEVENTH]
         },
     "11th_No_Tonic_No_5th":
         {
             "Desc" : "All 11th chords with no tonic and no fifth",
-            "Degrees" : [THIRD, SEVENTH, NINETH, ELEVENTH]
+            "Degrees" : [THIRD, SEVENTH, NINTH, ELEVENTH]
         },
     "11th_No_9th":
         {
@@ -110,22 +110,22 @@ SEL_DEGREES = {
     "13th_Complete":
         {
             "Desc" : "All complete 13th chords",
-            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINETH, ELEVENTH, THIRTEENTH]
+            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINTH, ELEVENTH, THIRTEENTH]
         },
     "13th_No_Tonic":
         {
             "Desc" : "All 13th chords with no tonic",
-            "Degrees" : [THIRD, FIFTH, SEVENTH, NINETH, ELEVENTH, THIRTEENTH]
+            "Degrees" : [THIRD, FIFTH, SEVENTH, NINTH, ELEVENTH, THIRTEENTH]
         },
     "13th_No_5th":
         {
             "Desc" : "All 13th chords with no fifth",
-            "Degrees" : [TONIC, THIRD, SEVENTH, NINETH, ELEVENTH, THIRTEENTH]
+            "Degrees" : [TONIC, THIRD, SEVENTH, NINTH, ELEVENTH, THIRTEENTH]
         },
     "13th_No_Tonic_No_5th":
         {
             "Desc" : "All 13th chords with no tonic and no fifth",
-            "Degrees" : [THIRD, SEVENTH, NINETH, ELEVENTH, THIRTEENTH]
+            "Degrees" : [THIRD, SEVENTH, NINTH, ELEVENTH, THIRTEENTH]
         },
     "13th_No_9th":
         {
@@ -150,22 +150,22 @@ SEL_DEGREES = {
     "13th_No_11th":
         {
             "Desc" : "All 13th chords without 11th",
-            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINETH, THIRTEENTH]
+            "Degrees" : [TONIC, THIRD, FIFTH, SEVENTH, NINTH, THIRTEENTH]
         },
     "13th_No_Tonic_No_11th":
         {
             "Desc" : "All 13th chords with no tonic and no 9th",
-            "Degrees" : [THIRD, FIFTH, SEVENTH, NINETH, THIRTEENTH]
+            "Degrees" : [THIRD, FIFTH, SEVENTH, NINTH, THIRTEENTH]
         },
     "13th_No_5th_No_11th":
         {
             "Desc" : "All 13th chords with no fifth and no 9th",
-            "Degrees" : [TONIC, THIRD, SEVENTH, NINETH, THIRTEENTH]
+            "Degrees" : [TONIC, THIRD, SEVENTH, NINTH, THIRTEENTH]
         },
     "13th_No_Tonic_No_5th_No_11th":
         {
             "Desc" : "All 13th chords with no tonic, no fifth and no 9th",
-            "Degrees" : [THIRD, SEVENTH, NINETH, THIRTEENTH]
+            "Degrees" : [THIRD, SEVENTH, NINTH, THIRTEENTH]
         },
     "13th_No_9th_No_11th":
         {

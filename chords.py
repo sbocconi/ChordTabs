@@ -12,7 +12,7 @@ def main():
     DEFAULT_CHORD = ['C', 'E', 'G', 'Bb', 'D', 'F', 'A']
     while True:
         try:
-            input_chord = input(f"Enter chord as 1st, 3rd, 5th, 7th, 9th, 11th, 13th, space to skip grade (default {DEFAULT_CHORD}):")
+            input_chord = input(f"Enter chord as 1st, 3rd, 5th, 7th, 9th, 11th, 13th, space to skip degree (default {DEFAULT_CHORD}):")
             
             if input_chord != '':
                 chord = input_chord.split(',')

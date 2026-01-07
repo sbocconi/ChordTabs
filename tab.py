@@ -19,14 +19,14 @@ class Tab:
     def has_open_strings(self):
         return True if 0 in self.fret_nrs else False
 
-    def gap_top_strings(self, allow_open_strings:bool):
+    def gap_top_strings(self, open_strings:bool):
         # Returns False if there is no gap in the strings among n-1 higher strings
         # or the gap strings are notes in the chord if open strings are allowed
         
         for i in reversed(range(2,len(self.chosen_strings))):
             # Are strings consecutive (diff is 1)?
             if self.chosen_strings[i] != (self.chosen_strings[i-1]-1):
-                if allow_open_strings == False:
+                if open_strings == False:
                     # breakpoint()
                     return True
                 # The gap strings can be played (a vuoto) if their notes belong to the chord
@@ -77,10 +77,10 @@ class Tab:
                     max_fret_nr = self.fret_nrs[i]
         return max_fret_nr
 
-    def is_preferred_inversion(self, bottom_top_notes):
-        if bottom_top_notes[0] != Tab.inputs['bottom_top_notes']['wildcard'] and self.inversion[0] != bottom_top_notes[0]:
+    def is_preferred_inversion(self, low_high_notes):
+        if low_high_notes[0] != Tab.inputs['low_high_notes']['wildcard'] and self.inversion[0] != low_high_notes[0]:
             return False 
-        if bottom_top_notes[-1] != Tab.inputs['bottom_top_notes']['wildcard'] and self.inversion[-1] != bottom_top_notes[-1]:
+        if low_high_notes[-1] != Tab.inputs['low_high_notes']['wildcard'] and self.inversion[-1] != low_high_notes[-1]:
             return False 
 
         return True
@@ -92,10 +92,10 @@ class Tab:
                     return False
         return True
     
-    def are_avoided_strings(self, avoid_strings):
+    def are_avoided_strings(self, out_strings):
         # breakpoint()
-        for idx in range(len(avoid_strings)):
-            if avoid_strings[idx] in self.chosen_strings:
+        for idx in range(len(out_strings)):
+            if out_strings[idx] in self.chosen_strings:
                     return True
         return False
 
@@ -130,28 +130,28 @@ class Tabs:
             'default' : -1,
             'current' : None
         },
-        'allow_open_strings':{
+        'open_strings':{
             'desc': "Allow open strings in the chord",
             'type' : bool,
             'default' : False,
             'current' : None
         },
-        'bottom_top_notes':{
-            'desc': "Specify the bottom and top note",
+        'low_high_notes':{
+            'desc': "Specify the low and high notes in the chord (use * for don't care)",
             'type' : tuple,
             'subtype' : str,
             'default' : None,
             'wildcard' : '*',
             'current' : None
         },
-        'prefer_strings': {
+        'in_strings': {
             'desc': "What strings should be part of the voicing",
             'type' : tuple,
             'subtype' : int,
             'default' : None,
             'current' : None
         },
-        'avoid_strings': {
+        'out_strings': {
             'desc': "What strings should NOT be part of the voicing",
             'type' : tuple,
             'subtype' : int,
@@ -251,22 +251,22 @@ class Tabs:
                         self.all_tabs[key]["Selected"][index] = False
                         continue
 
-                if Tabs.inputs['allow_open_strings']['current'] != True:
+                if Tabs.inputs['open_strings']['current'] != True:
                     if tab.has_open_strings():
                         self.all_tabs[key]["Selected"][index] = False
                         continue
 
-                if Tabs.inputs['bottom_top_notes']['current'] != None:
-                    if not tab.is_preferred_inversion(Tabs.inputs['bottom_top_notes']['current']):
+                if Tabs.inputs['low_high_notes']['current'] != None:
+                    if not tab.is_preferred_inversion(Tabs.inputs['low_high_notes']['current']):
                         self.all_tabs[key]["Selected"][index] = False
                         continue
-                if Tabs.inputs['prefer_strings']['current'] != None:
-                    if not tab.are_preferred_strings(Tabs.inputs['prefer_strings']['current']):
+                if Tabs.inputs['in_strings']['current'] != None:
+                    if not tab.are_preferred_strings(Tabs.inputs['in_strings']['current']):
                         self.all_tabs[key]["Selected"][index] = False
                         continue
 
-                if Tabs.inputs['avoid_strings']['current'] != None:
-                    if tab.are_avoided_strings(Tabs.inputs['avoid_strings']['current']):
+                if Tabs.inputs['out_strings']['current'] != None:
+                    if tab.are_avoided_strings(Tabs.inputs['out_strings']['current']):
                         self.all_tabs[key]["Selected"][index] = False
                         continue
             
@@ -298,10 +298,7 @@ class Tabs:
 
 
     def gen_description(self):
-        # chord_bin = f"max_dist={max_dist}_openstr={allow_open_strings}_bottomtop={self.prtable_tpl(bottom_top_notes)}_prefstr={self.prtable_tpl(prefer_strings)}"
-        # chord_bin = f"{chord_bin}_avoidstr={self.prtable_tpl(avoid_strings)}_gaptop={gap_top_strings}_minfret={min_fret_pos}_maxfret={max_fret_pos}"
-        # self.chord_bin = chord_bin
-        # 
+        # Generate a description of the tabs created
         desc = f"Tabs generated for {self.instrument.name} with the following parameters:\n\n"
         for param, data in Tabs.inputs.items():
             # breakpoint()
@@ -310,19 +307,13 @@ class Tabs:
         return desc
 
     def print_tabs(self):
+        # Generate chord diagrams and output file
         diagram = ChordDiagram()
-        diagram.create_lp(title=f"Tabs for chord {' '.join(self.chord)}", composer="Farback", description=self.gen_description(), 
-                          tabs=self.all_tabs, nr_strings = self.instrument.nr_strings, fret_count=Tabs.inputs['max_dist']['current'])
-        diagram.create_pdf("./porcoilclero")
-
-
-    @classmethod
-    def prtable_tpl(cls, tpl:tuple)->str:
-        if tpl == None:
-            return "No"
-        # breakpoint()
-        ret = ','.join(map(str,tpl))
-        return ret
-        
-
-    
+        if diagram.create_lp(title=f"Tabs for chord {' '.join(self.chord)}", composer="Farback", description=self.gen_description(), 
+                          tabs=self.all_tabs, nr_strings = self.instrument.nr_strings, fret_count=Tabs.inputs['max_dist']['current']):
+            params = {}
+            for key in self.inputs:
+                params[key] = self.inputs[key]['current']
+            diagram.create_file(self.chord, params, type='pdf')
+        else:
+            print(f"No tabs to generate chord diagrams")

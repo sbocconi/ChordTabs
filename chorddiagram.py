@@ -3,15 +3,15 @@ from pathlib import Path
 
 from instrument import Instrument
 
-TOP_MARGIN = 20
-BOTTOM_MARGIN = 6
+TOP_MARGIN = 20 # Margin on top of page in mm
+BOTTOM_MARGIN = 6 # Margin on bottom of page in mm
 
+BASE_TAB_WIDTH = 15.0 # Base width of chord diagram in mm at scale 1.0
+TAB_SPACING = 1.0 # Horizontal spacing between tabs in PDF (in mm)
+LEFT_MARGIN = 20 # Margin on left side of page in mm
+RIGHT_MARGIN = 20 # Margin on right side of page in mm
+TAB_SCALE = 1.4 # Scaling factor for chord tabs
 
-BASE_TAB_WIDTH = 15.0
-TAB_SPACING = 1.0
-LEFT_MARGIN = 20
-RIGHT_MARGIN = 20
-TAB_SCALE = 1.4
 
 ROW_SPACING = 2.0 # Vertical spacing between rows in PDF (in mm)
 CHAPTER_SPACING = 5.0 # Vertical spacing between rows in PDF (in mm)
@@ -22,7 +22,6 @@ class ChordDiagram:
     LILYPOND_BIN = '/opt/homebrew/bin/lilypond'
     ROOT = "./GeneratedTabs"
 
-    
 
     def __init__(self):
         pass        
@@ -60,6 +59,8 @@ class ChordDiagram:
 
     @classmethod
     def make_header(cls, title:str, composer:str, description:str, chapters:list) -> list:
+        if len(chapters) == 0:
+            return []
         book = []
         header = r"""
 \version "2.24.4"
@@ -148,7 +149,7 @@ class ChordDiagram:
         return chapter_rows
     
     @classmethod
-    def make_chapters(cls, tabs:object, nr_strings:int, fret_count:int)->list:
+    def make_chapters(cls, tabs:dict, nr_strings:int, fret_count:int)->list:
         """
         Creates the chapters by filling their rows for every chapter
         """
@@ -157,6 +158,9 @@ class ChordDiagram:
         for key in tabs:
             rows = []
             line_items = []
+            selected_count = sum(tabs[key]["Selected"])
+            if selected_count == 0:
+                continue
             for index, tab in enumerate(tabs[key]["Tabs"]):
                 if not tabs[key]["Selected"][index]:
                     continue
@@ -169,7 +173,7 @@ class ChordDiagram:
                 #     break
                 line_items.append(cls.make_tab(cls.chord_to_lilypond(tab,nr_strings)))
                 if len(line_items) < (2*nr_col-1):
-                    line_items.append(f'\\hspace #{TAB_SPACING}')            
+                    line_items.append(f'\\hspace #{TAB_SPACING}')
             if len(line_items) > 0:
                 rows.extend(cls.make_line(line_items, end=True))
         # Combine header items (if any) with grid rows
@@ -194,53 +198,53 @@ class ChordDiagram:
         return nr_tabs
     
     @classmethod
-    def create_lp(cls, title, composer, description, tabs, nr_strings, fret_count):
+    def create_lp(cls, title:str, composer:str, description:str, tabs:dict, nr_strings:int, fret_count:int)->bool:
         # breakpoint()
         ly_grid =  cls.make_header(title, composer, description, cls.make_chapters(tabs, nr_strings, fret_count))
 
+        if len(ly_grid) == 0:
+            return False
         with open(cls.TMP_FILE, "w") as f:
             f.write("\n".join(ly_grid))
-        
-    @classmethod
-    def create_pdf(cls, out_bin):
-        # out_path = self.get_fullpath(out_bin)
-        out_path = out_bin
-        # call the pdf creator on the lilypond path
-        os.system('%(lilypond)s %(params)s -o %(output)s %(input)s' % {
-            'lilypond': cls.LILYPOND_BIN,
-            'params': '--pdf',
-            'output': out_path,
-            'input': cls.TMP_FILE,
-        })
         return True
     
+        
     @classmethod
-    def create_png(cls, out_bin):
-        out_path = cls.get_fullpath(out_bin)
-        # call the png creator on the lilypond path
+    def make_filename(cls, chord_notes:str, params:dict=None)->str:
+        # Build filename including chord signature, type and optional generation parameters
+        
+        if params:
+            param_items = []
+            for k in sorted(params):
+                v = params[k]
+                safe = str(v).replace(' ', '_').replace('/', '_').replace('(', '').replace(')', '')
+                param_items.append(f"{k}={safe}")
+            param_suffix = "_" + "_".join(param_items) if len(param_items)>0 else ""
+        else:
+            param_suffix = ""
+
+        filename = f"{chord_notes}{param_suffix}"
+        return filename
+
+
+    @classmethod
+    def create_file(cls, chord_notes:list, params:dict=None, type:str='pdf')->bool:
+        # Build filename including chord signature, type and optional generation parameters
+        
+        filename = cls.make_filename(cls.chord_signature(chord_notes), params)
+        out_path = Path(cls.ROOT, filename)
+
+        # call the pdf creator on the lilypond path
+        # breakpoint()
         os.system('%(lilypond)s %(params)s -o %(output)s %(input)s' % {
             'lilypond': cls.LILYPOND_BIN,
-            'params': '--png -dresolution=1200 -dbackend=eps',
-            'output': out_path,
+            'params': '--pdf' if type=='pdf' else '--png -dresolution=1200 -dbackend=eps',
+            'output': str(out_path),
             'input': cls.TMP_FILE,
         })
-        # clean up excess files
-        # LILYPOND_GARBAGE = ['-systems.count', '-1.eps', '-systems.tex', '-systems.texi', '.eps']
-        # files = ' '.join([path + garbage for garbage in LILYPOND_GARBAGE])
-        # os.system('rm ' + files)
-        # return true on success
         return True
 
-
     @classmethod
-    def get_fullpath(cls, out_bin):
-        # breakpoint()
-        out_path = Path(cls.ROOT, cls.chord_signature(),out_bin, f"{cls.chord_signature()}_{cls.chord_type}")
-        if not out_path.parent.exists():
-            out_path.parent.mkdir(parents=True)
-        return out_path
-
-    @classmethod
-    def chord_signature(cls):
-        prfx = '.'.join(cls.chord_notes)
+    def chord_signature(cls, chord_notes:list)->str:
+        prfx = '.'.join(chord_notes)
         return prfx
