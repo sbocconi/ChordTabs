@@ -47,35 +47,25 @@ class Tab:
         return nr_gap
 
     def max_fret_dist(self):
-        # Returns the max nr of frets between any two positions
-        # not counting open strings
-        max_fret_nr = 0
-        min_fret_nr = 1000
-        for i in range(len(self.fret_nrs)):
-            if self.fret_nrs[i] != 0:
-                if self.fret_nrs[i] > max_fret_nr:
-                    max_fret_nr = self.fret_nrs[i]
-                if self.fret_nrs[i] < min_fret_nr:
-                    min_fret_nr = self.fret_nrs[i]
-        return max_fret_nr - min_fret_nr + 1
+        # Returns the fret span (highest - lowest) among fretted notes (ignores open strings).
+        fretted = [f for f in self.fret_nrs if f != 0]
+        if not fretted:
+            return 0
+        return max(fretted) - min(fretted)
     
     def min_fret_pos(self):
         # Returns the lowest fret position
-        min_fret_nr = 1000
-        for i in range(len(self.fret_nrs)):
-            if self.fret_nrs[i] != 0:
-                if self.fret_nrs[i] < min_fret_nr:
-                    min_fret_nr = self.fret_nrs[i]
-        return min_fret_nr
+        fretted = [f for f in self.fret_nrs if f != 0]
+        if not fretted:
+            return 0
+        return min(fretted)
     
     def max_fret_pos(self):
         # Returns the lowest fret position
-        max_fret_nr = 0
-        for i in range(len(self.fret_nrs)):
-            if self.fret_nrs[i] != 0:
-                if self.fret_nrs[i] > max_fret_nr:
-                    max_fret_nr = self.fret_nrs[i]
-        return max_fret_nr
+        fretted = [f for f in self.fret_nrs if f != 0]
+        if not fretted:
+            return 0
+        return max(fretted)
 
     def is_preferred_inversion(self, low_high_notes):
         if low_high_notes[0] != Tab.inputs['low_high_notes']['wildcard'] and self.inversion[0] != low_high_notes[0]:
@@ -247,9 +237,11 @@ class Tabs:
             tab_count = 0
             for index, tab in enumerate(self.all_tabs[key]["Tabs"]):
                 if Tabs.inputs['max_dist']['current'] != -1:
+                    # breakpoint()
                     if tab.max_fret_dist() > Tabs.inputs['max_dist']['current']:
                         self.all_tabs[key]["Selected"][index] = False
                         continue
+                    # tab.print_tab()
 
                 if Tabs.inputs['open_strings']['current'] != True:
                     if tab.has_open_strings():

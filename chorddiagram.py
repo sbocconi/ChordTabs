@@ -10,7 +10,7 @@ BASE_TAB_WIDTH = 15.0 # Base width of chord diagram in mm at scale 1.0
 TAB_SPACING = 1.0 # Horizontal spacing between tabs in PDF (in mm)
 LEFT_MARGIN = 20 # Margin on left side of page in mm
 RIGHT_MARGIN = 20 # Margin on right side of page in mm
-TAB_SCALE = 1.4 # Scaling factor for chord tabs
+TAB_SCALE = 1.5 # Scaling factor for chord tabs
 
 
 ROW_SPACING = 2.0 # Vertical spacing between rows in PDF (in mm)
