@@ -246,5 +246,5 @@ class ChordDiagram:
 
     @classmethod
     def chord_signature(cls, chord_notes:list)->str:
-        prfx = '.'.join(chord_notes)
+        prfx = '.'.join([chord_notes[i] for i in range(len(chord_notes)) if chord_notes[i] != ''])
         return prfx
